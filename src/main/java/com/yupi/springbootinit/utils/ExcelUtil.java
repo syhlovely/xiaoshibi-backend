@@ -54,7 +54,7 @@ public class ExcelUtil {
             //用字符串工具类中的join分割字符串
             stringBuilder.append(StringUtils.join(collect,",")).append("\n");
             //取出数据
-            for (int i = 1; i < headerMap.size(); i++) {
+            for (int i = 1; i < list.size(); i++) {
                 //做去空值校验,用逗号拼接
                 String value = StringUtils.join(list.get(i).values().stream().filter(ObjectUtil::isNotEmpty).collect(Collectors.toList()), ",");
                 stringBuilder.append(StringUtils.join(value,",")).append("\n");

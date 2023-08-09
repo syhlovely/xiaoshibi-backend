@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 图表信息表
@@ -12,6 +16,9 @@ import lombok.Data;
  */
 @TableName(value ="chart")
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Chart implements Serializable {
     /**
      * id
@@ -53,6 +60,16 @@ public class Chart implements Serializable {
      * 用户 id
      */
     private Long userId;
+
+    /**
+     * 图表状态 wait-等待,running-生成中,succeed-成功生成,failed-生成失败
+     */
+    private String chartStatus;
+
+    /**
+     * 执行信息
+     */
+    private String execMessage;
 
     /**
      * 创建时间
