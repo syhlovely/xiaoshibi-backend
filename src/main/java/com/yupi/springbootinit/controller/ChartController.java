@@ -17,6 +17,8 @@ import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.exception.ThrowUtils;
 import com.yupi.springbootinit.manager.AiManager;
 import com.yupi.springbootinit.manager.RedisLimiterManager;
+import com.yupi.springbootinit.message.RabbitMqMessageConsumer;
+import com.yupi.springbootinit.message.RabbitMqMessageProducer;
 import com.yupi.springbootinit.model.dto.chart.*;
 import com.yupi.springbootinit.model.dto.file.UploadFileRequest;
 import com.yupi.springbootinit.model.entity.Chart;
@@ -32,6 +34,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,6 +46,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static com.yupi.springbootinit.constant.CommonConstant.AI_ID;
 
@@ -73,6 +77,14 @@ public class ChartController {
 
     @Resource
     private ThreadPoolExecutor threadPoolExecutor;
+
+    @Resource
+    private RabbitMqMessageProducer rabbitMqMessageProducer;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+
 
 
 
@@ -237,6 +249,80 @@ public class ChartController {
                 return;
             }
         }, threadPoolExecutor);
+        //返回数据，不用返回图表数据了，后续查看在图表查看中
+        BiVo biVo = new BiVo();
+//        biVo.setGenChart(echarts);
+//        biVo.setGenResult(info);
+        biVo.setChartId(chart.getId());
+        return ResultUtils.success(biVo);
+    }
+
+    /**
+     * 智能分析（消息队列）
+     *
+     * @param multipartFile
+     * @param
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen/asyncMq")
+    public BaseResponse<BiVo> genChartByAiMqAsync(@RequestPart("file") MultipartFile multipartFile,
+                                                genChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+
+
+        Long userId = userService.getLoginUser(request).getId();
+
+        //下面的限流实现的是同一时间段的限流，这里实现的是防止单个用户进行刷量
+        String key = "genChart:" + userId;
+        //查看redis中的ttl，如果有ttl的话证明还在限制条件之内
+        Long expire = stringRedisTemplate.getExpire(key);
+        log.info("当前用户剩余限制时间ttl:{}",expire);
+//        ThrowUtils.throwIf(expire >= 0,ErrorCode.PARAMS_ERROR,"速度太快,请稍后再重试");
+        if (expire >= 0){
+//            throw new RuntimeException("速度太快，请稍后再试");
+            return ResultUtils.error(ErrorCode.TOO_MANY_REQUEST);
+        }
+        //一个用户同时智能生成一个图表，这里用redis的setex实现，5秒内只能生成一张
+
+        stringRedisTemplate.opsForValue().set(key,userId.toString(),5, TimeUnit.SECONDS);
+
+        //限流,限流粒度：按照传的key值来，这里按照用户和方法进行限流
+        redisLimiterManager.doRateLimit("genChartByAi_" + userId);
+
+        String name = genChartByAiRequest.getName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100 ,ErrorCode.PARAMS_ERROR,"名字格式错误");
+        ThrowUtils.throwIf(StringUtils.isBlank(goal),ErrorCode.PARAMS_ERROR,"分析参数为空");
+        //校验文件大小以及文件名称后缀是否合法
+        long size = multipartFile.getSize();
+        String originalFilename = multipartFile.getOriginalFilename();
+        final long file_MB = 1024 * 1024l;
+        ThrowUtils.throwIf(size > file_MB,ErrorCode.PARAMS_ERROR,"文件过大");
+        //校验名称后缀是否合法
+        List<String> nameList = Arrays.asList("jpg", "png", "svg", "jpeg", "webp", "xlsx", "xls");
+        //获取文件名后缀进行过滤
+        String suffix = FileUtil.getSuffix(originalFilename);
+        ThrowUtils.throwIf(!nameList.contains(suffix),ErrorCode.NOT_FOUND_ERROR,"文件类型错误");
+
+        //excel转换成csv
+        String csv = ExcelUtil.excelToCsv(multipartFile);
+
+        //保存数据到数据库当中，更改数据库状态
+        Chart chart = Chart.builder()
+                .goal(goal)
+                .name(name)
+                .chartData(csv)
+                .chartType(chartType)
+                .userId(userId)
+                .chartStatus("wait")
+                .build();
+        chartService.save(chart);
+
+        //消息消息队列发送消息服务
+        rabbitMqMessageProducer.sendMessage("demo_exchange","demo_queue",chart.getId().toString());
+
+
         //返回数据，不用返回图表数据了，后续查看在图表查看中
         BiVo biVo = new BiVo();
 //        biVo.setGenChart(echarts);
