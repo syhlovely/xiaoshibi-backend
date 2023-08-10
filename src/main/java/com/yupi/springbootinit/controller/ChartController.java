@@ -279,8 +279,8 @@ public class ChartController {
         log.info("当前用户剩余限制时间ttl:{}",expire);
 //        ThrowUtils.throwIf(expire >= 0,ErrorCode.PARAMS_ERROR,"速度太快,请稍后再重试");
         if (expire >= 0){
-//            throw new RuntimeException("速度太快，请稍后再试");
-            return ResultUtils.error(ErrorCode.TOO_MANY_REQUEST);
+            throw new RuntimeException("速度太快，请稍后再试");
+//            return ResultUtils.error(ErrorCode.TOO_MANY_REQUEST);
         }
         //一个用户同时智能生成一个图表，这里用redis的setex实现，5秒内只能生成一张
 
