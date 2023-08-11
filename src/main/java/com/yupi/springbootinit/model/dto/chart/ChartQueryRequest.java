@@ -1,8 +1,10 @@
 package com.yupi.springbootinit.model.dto.chart;
 
 import com.yupi.springbootinit.common.PageRequest;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
@@ -14,6 +16,8 @@ import java.io.Serializable;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class ChartQueryRequest extends PageRequest implements Serializable {
 
     private Long id;
