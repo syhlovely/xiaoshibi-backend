@@ -1,0 +1,46 @@
+package com.xiaoshi.lookbi.model.dto.chart;
+
+import com.xiaoshi.lookbi.common.PageRequest;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+
+/**
+ * 查询请求
+ *
+ * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
+ * @from <a href="https://yupi.icu">编程导航知识星球</a>
+ */
+@EqualsAndHashCode(callSuper = true)
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ChartQueryRequest extends PageRequest implements Serializable {
+
+    private Long id;
+
+    /**
+     * 图标名称
+     */
+    private String name;
+
+    /**
+     * 分析目标
+     */
+    private String goal;
+
+    /**
+     * 图表类型
+     */
+    private String chartType;
+
+    /**
+     * 用户 id
+     */
+    private Long userId;
+
+    private static final long serialVersionUID = 1L;
+}
