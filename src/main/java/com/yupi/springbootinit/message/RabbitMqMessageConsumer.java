@@ -2,6 +2,7 @@ package com.yupi.springbootinit.message;
 
 import com.rabbitmq.client.Channel;
 import com.yupi.springbootinit.common.ErrorCode;
+import com.yupi.springbootinit.config.RabbitMQConfig;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.manager.AiManager;
 import com.yupi.springbootinit.model.entity.Chart;
@@ -9,6 +10,7 @@ import com.yupi.springbootinit.service.ChartService;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +23,8 @@ import java.io.IOException;
 import static com.yupi.springbootinit.constant.CommonConstant.AI_ID;
 
 /**
- * @author Shier
- * CreateTime 2023/6/24 15:53
+ * @author shiyinghan
+ * CreateTime 2023/8/11 15:53
  * RabbitMQ 消费者
  */
 @Component
@@ -35,6 +37,29 @@ public class RabbitMqMessageConsumer {
     @Resource
     private AiManager aiManager;
 
+
+    @RabbitListener(queues = RabbitMQConfig.DEAD_QUEUE)
+    public void listener_dead(String msg, Channel channel, Message message) throws IOException {
+        System.out.println("=======================================================================================");
+        System.out.println("死信接收到消息" + msg);
+        System.out.println("唯一标识:" + message.getMessageProperties().getCorrelationId());
+        System.out.println("messageID:" + message.getMessageProperties().getMessageId());
+
+//        if (StringUtils.isBlank(msg)){
+//            //消息为空，拒绝消息
+////            handleChartUpdateError(chartId,"更新图表信息失败");
+//            channel.basicNack(deliveryTag,false,false);
+//            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表为空");
+//        }
+        //生成失败的消息进入死信队列，这里将生成失败的任务状态改成failed
+        Chart chart = Chart.builder().id(Long.valueOf(msg)).chartStatus("failed").build();
+        chartService.updateById(chart);
+
+        channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+    }
+
+
+
     /**
      * 指定程序监听的消息队列和确认机制
      * @param message
@@ -42,12 +67,18 @@ public class RabbitMqMessageConsumer {
      * @param deliveryTag
      */
     @SneakyThrows
-    @RabbitListener(queues = {"demo_queue"}, ackMode = "MANUAL")
+    @RabbitListener(queues = RabbitMQConfig.QUEUE, ackMode = "MANUAL")
     private void receiveMessage(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag){
+        //测试私信队列
+        if (1==1) {
+            channel.basicNack(deliveryTag, false, false);
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图表为空");
+        }
         if (StringUtils.isBlank(message)){
             //消息为空，拒绝消息
 //            handleChartUpdateError(chartId,"更新图表信息失败");
             channel.basicNack(deliveryTag,false,false);
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表为空");
         }
         long chartId = Long.parseLong(message);
 
@@ -57,10 +88,11 @@ public class RabbitMqMessageConsumer {
         //先将图表信息状态改成执行中
         boolean update = chartService.updateById(Chart.builder().id(chartId).chartStatus("running").build());
         if (!update){
-            handleChartUpdateError(chartId,"更新图表信息失败");
+//            handleChartUpdateError(chartId,"更新图表信息失败");
             //拒绝消息
             channel.basicNack(deliveryTag,false,false);
-            return;
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表更新失败");
+//            return;
         }
         //预设已经有了,异步处理图表请求
         //通过yupisdk发请求获取返回值
@@ -80,15 +112,11 @@ public class RabbitMqMessageConsumer {
         //更新图表信息，更新状态为生成图表成功，succeed
         boolean succeed = chartService.updateById(Chart.builder().genChart(echarts).genResult(info).chartStatus("succeed").id(chart.getId()).build());
         if (!succeed){
-            handleChartUpdateError(chartId,"更新图表信息失败");
+//            handleChartUpdateError(chartId,"更新图表信息失败");
             //mq手动拒绝
             channel.basicNack(deliveryTag,false,false);
-            return;
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表更新失败");
         }
-
-
-
-
       log.info("receiveMessage = {}",message);
         try {
             // 手动确认消息

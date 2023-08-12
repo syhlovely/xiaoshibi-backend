@@ -82,7 +82,7 @@ public class CacheAspect {
             //缓存名称
             String name = annotation.name();
             //先从redis获取
-            String redisKey = "CacheBI" + "::" + className+"::"+methodName+"::"+params;
+            String redisKey = name + "::" + className+"::"+methodName+"::"+params;
             String redisValue = redisTemplate.opsForValue().get(redisKey);
             if (StringUtils.isNotEmpty(redisValue)){
                 log.info("走了缓存~~~,{},{}",className,methodName);

@@ -10,6 +10,7 @@ import com.yupi.springbootinit.common.BaseResponse;
 import com.yupi.springbootinit.common.DeleteRequest;
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.common.ResultUtils;
+import com.yupi.springbootinit.config.RabbitMQConfig;
 import com.yupi.springbootinit.config.ThreadPoolExecutorConfig;
 import com.yupi.springbootinit.constant.CommonConstant;
 import com.yupi.springbootinit.constant.FileConstant;
@@ -321,7 +322,7 @@ public class ChartController {
         chartService.save(chart);
 
         //消息消息队列发送消息服务
-        rabbitMqMessageProducer.sendMessage("demo_exchange","demo_queue",chart.getId().toString());
+        rabbitMqMessageProducer.sendMessage(RabbitMQConfig.EXCHANGE,RabbitMQConfig.ROUTING_KEY,chart.getId().toString());
 
 
         //返回数据，不用返回图表数据了，后续查看在图表查看中

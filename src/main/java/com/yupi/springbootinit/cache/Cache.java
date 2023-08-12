@@ -10,6 +10,6 @@ public @interface Cache {
 
     long expire() default 1 * 60 * 1000;
     //缓存标识 key
-    String name() default "";
+    String name() default "Cache";
 
 }
