@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class IPLocal {
 
             public static void main(String[] args) throws IOException {
+                //xbd文件不能直接读取到，需要通过文件流先读取到内存当中
                 ClassPathResource resource = new ClassPathResource("ip2region/ip2region.xdb");
                 InputStream inputStream = resource.getInputStream();
                 byte[] bytes = IOUtils.toByteArray(inputStream);
