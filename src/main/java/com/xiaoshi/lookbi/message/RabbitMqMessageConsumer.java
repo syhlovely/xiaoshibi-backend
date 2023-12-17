@@ -69,17 +69,20 @@ public class RabbitMqMessageConsumer {
     @SneakyThrows
     @RabbitListener(queues = RabbitMQConfig.QUEUE, ackMode = "MANUAL")
     private void receiveMessage(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag){
-        //测试私信队列
-        if (1==1) {
-            channel.basicNack(deliveryTag, false, false);
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图表为空");
-        }
+        //测试死信队列
+//        if (1==1) {
+//            channel.basicNack(deliveryTag, false, false);
+//            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图表为空");
+//        }
+
         if (StringUtils.isBlank(message)){
             //消息为空，拒绝消息
 //            handleChartUpdateError(chartId,"更新图表信息失败");
-            channel.basicNack(deliveryTag,false,false);
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表为空");
+//            channel.basicNack(deliveryTag,false,false);
+            //重试机制
+            throw new RuntimeException("消息错误");
         }
+//        int a = 10 / 0 ;
         long chartId = Long.parseLong(message);
 
         //根据消息中的id查询出图表信息
@@ -90,8 +93,8 @@ public class RabbitMqMessageConsumer {
         if (!update){
 //            handleChartUpdateError(chartId,"更新图表信息失败");
             //拒绝消息
-            channel.basicNack(deliveryTag,false,false);
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表更新失败");
+//            channel.basicNack(deliveryTag,false,false);
+            throw new RuntimeException("图表更新失败");
 //            return;
         }
         //预设已经有了,异步处理图表请求
@@ -103,7 +106,7 @@ public class RabbitMqMessageConsumer {
         //分割返回的字符串获取我们需要的数据
         String[] split = doChat.split("【【【【【");
         if (split.length<3){
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"AI生成错误,请重新生成一次");
+            throw new RuntimeException("AI生成错误,重新生成");
         }
         //生成的echarts代码
         String echarts = split[1];
@@ -114,8 +117,8 @@ public class RabbitMqMessageConsumer {
         if (!succeed){
 //            handleChartUpdateError(chartId,"更新图表信息失败");
             //mq手动拒绝
-            channel.basicNack(deliveryTag,false,false);
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR,"图表更新失败");
+//            channel.basicNack(deliveryTag,false,false);
+            throw new RuntimeException("图表更新失败");
         }
       log.info("receiveMessage = {}",message);
         try {

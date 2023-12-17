@@ -8,20 +8,26 @@ spring:
     url: jdbc:mysql://noerr.top:3306/yubi
     username: root
     password: shiyinghan
+  # rabbitmq 配置
+  rabbitmq:
+    host: noerr.top
+    password: admin
+    username: admin
+    port: 5672
   # Redis 配置
   # todo 需替换配置
   redis:
     database: 1
-    host: localhost
+    host: noerr.top
     port: 6379
     timeout: 5000
-    password: 123456
+#    password: 123456
   # Elasticsearch 配置
   # todo 需替换配置
-  elasticsearch:
-    uris: http://localhost:9200
-    username: root
-    password: 123456
+#  elasticsearch:
+#    uris: http://localhost:9200
+#    username: root
+#    password: 123456
 mybatis-plus:
   configuration:
     # 生产环境关闭日志

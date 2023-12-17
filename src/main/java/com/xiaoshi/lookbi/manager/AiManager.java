@@ -13,7 +13,7 @@ import javax.annotation.Resource;
 /**
  * @Author shiyinghan
  * @Date 2023/7/31 17:54
- * @PackageName:com.yupi.springbootinit.manager
+ * @PackageName:com.xiaoshi.lookbi.manager
  * @ClassName: AiManager
  * @Description: TODO
  * @Version 1.0

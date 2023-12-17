@@ -3,22 +3,21 @@ package com.xiaoshi.lookbi.cache;
 //import com.alibaba.fastjson.JSON;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-        import com.fasterxml.jackson.databind.ObjectMapper;
-        import com.xiaoshi.lookbi.common.ResultUtils;
-        import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiaoshi.lookbi.common.ResultUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
-        import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.beans.factory.annotation.Autowired;
-        import org.springframework.data.redis.core.RedisTemplate;
-        import org.springframework.stereotype.Component;
-
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 import javax.servlet.http.HttpServletRequest;
-        import java.lang.reflect.Method;
+import java.lang.reflect.Method;
 import java.time.Duration;
 //aop 定义一个切面，切面定义了切点和通知的关系
 @Aspect

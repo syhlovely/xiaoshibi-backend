@@ -19,9 +19,9 @@ import com.xiaoshi.lookbi.common.ResultUtils;
 import com.xiaoshi.lookbi.config.RabbitMQConfig;
 import com.xiaoshi.lookbi.manager.AiManager;
 import com.xiaoshi.lookbi.manager.RedisLimiterManager;
-import com.yupi.springbootinit.model.dto.chart.*;
 import com.xiaoshi.lookbi.model.entity.Chart;
 import com.xiaoshi.lookbi.model.entity.User;
+import com.xiaoshi.lookbi.model.vo.AiResponse;
 import com.xiaoshi.lookbi.model.vo.BiVo;
 import com.xiaoshi.lookbi.service.ChartService;
 import com.xiaoshi.lookbi.service.UserService;
@@ -46,8 +46,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * 帖子接口
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
 @RestController
 @RequestMapping("/chart")
@@ -78,7 +76,16 @@ public class ChartController {
     private StringRedisTemplate stringRedisTemplate;
 
 
-
+/**
+ * 你是一个数据分析师和前端开发专家，接下来我会按照以下固定格式给你提供内容：
+ * 分析需求： {数据分析的需求或者目标}
+ * 原始数据： {csv格式的原始数据，用,作为分隔符}
+ * 请根据这两部分内容，按照以下指定格式生成内容
+ * （此外不要输出任何多余的开头、结尾、注释
+ * 【【【【【 {前端 Echarts V5 的 option 配置对象js代码，合理地将数据进行可视化，不要生成任何多
+ * 【【【【【
+ * {明确的数据分析结论、越详细越好，不要生成多余的注释}
+ */
 
 
     /**
@@ -533,6 +540,54 @@ public class ChartController {
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
+    }
+
+    @GetMapping("get/vo")
+    public BaseResponse<Chart> getChartVOById(@RequestParam("id") Long id){
+        Chart chart = chartService.getById(id);
+        return ResultUtils.success(chart);
+    }
+
+
+    /**
+     * 图表重新生成(mq)
+     *
+     * @param chartRebuildRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen/async/rebuild")
+    public BaseResponse<AiResponse> genChartAsyncAiRebuild(ChartRebuildRequest chartRebuildRequest, HttpServletRequest request) {
+        Long chartId = chartRebuildRequest.getId();
+        Chart genChartByAiRequest = chartService.getById(chartId);
+        String chartType = genChartByAiRequest.getChartType();
+        String goal = genChartByAiRequest.getGoal();
+        String name = genChartByAiRequest.getName();
+        String chartData = genChartByAiRequest.getChartData();
+
+        //校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal),ErrorCode.PARAMS_ERROR,"目标为空");
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name)&&name.length()>=100,ErrorCode.PARAMS_ERROR,"名称过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartData),ErrorCode.PARAMS_ERROR,"表格数据为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartType),ErrorCode.PARAMS_ERROR,"生成表格类型为空");
+
+        User loginUser = userService.getLoginUser(request);
+        //限流
+        redisLimiterManager.doRateLimit("doRateLimit_" + loginUser.getId());
+
+        //保存数据库 wait
+        Chart chart = new Chart();
+        chart.setChartStatus("wait");
+        chart.setId(chartId);
+        boolean saveResult = chartService.updateById(chart);
+        ThrowUtils.throwIf(!saveResult,ErrorCode.SYSTEM_ERROR,"图表保存失败");
+        log.warn("准备发送信息给队列，Message={}=======================================",chartId);
+        rabbitMqMessageProducer.sendMessage(RabbitMQConfig.EXCHANGE,RabbitMQConfig.ROUTING_KEY,chartId.toString());
+        //返回数据参数
+        AiResponse aiResponse = new AiResponse();
+        aiResponse.setResultId(chart.getId());
+        return ResultUtils.success(aiResponse);
+
     }
 
 

@@ -3,7 +3,7 @@ spring:
     name: yubi-backend
   # 默认 dev 环境
   profiles:
-    active: dev
+    active: prod
   # 支持 swagger3
   mvc:
     pathmatch:

@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @Author shiyinghan
  * @Date 2023/8/7 17:43
- * @PackageName:com.yupi.springbootinit.config
+ * @PackageName:com.xiaoshi.lookbi.config
  * @ClassName: ThreadPoolExcutorConfig
  * @Description: TODO
  * @Version 1.0
